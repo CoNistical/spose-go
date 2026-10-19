@@ -12,7 +12,6 @@ import (
     "time"
 )
 
-// ANSI color codes (mimicking colorama Fore/Style)
 const (
     colorReset  = "\033[0m"
     colorGreen  = "\033[32m"
@@ -37,7 +36,6 @@ func scanPort(client *http.Client, target string, port int) bool {
     targetURL := fmt.Sprintf("http://%s:%d", target, port)
     resp, err := client.Get(targetURL)
     if err != nil {
-        // Network/timeout/redirect errors -> treat as closed/inconclusive
         return false
     }
     defer resp.Body.Close()
@@ -77,14 +75,12 @@ func main() {
         os.Exit(1)
     }
 
-    // Parse proxy URL
     proxyURL, err := url.Parse(proxy)
     if err != nil {
         fmt.Fprintf(os.Stderr, "Invalid proxy URL: %v\n", err)
         os.Exit(1)
     }
 
-    // Build the port list
     var ports []int
     switch {
     case allPorts:
@@ -115,17 +111,15 @@ func main() {
     fmt.Println(colorize(colorCyan, fmt.Sprintf("Using proxy address %s", proxy)))
     fmt.Printf("Scanning with %d concurrent workers (timeout: %ds per request)\n\n", workers, timeout)
 
-    // Configure HTTP client to route all requests through Squid
     transport := &http.Transport{
         Proxy:             http.ProxyURL(proxyURL),
-        DisableKeepAlives: true, // each request goes to a different backend port
+        DisableKeepAlives: true,
     }
     client := &http.Client{
         Transport: transport,
         Timeout:   time.Duration(timeout) * time.Second,
     }
 
-    // Fan-out worker pool
     portCh := make(chan int, workers)
     var mu sync.Mutex
     var openPorts []int
@@ -154,7 +148,6 @@ func main() {
 
     wg.Wait()
 
-    // Summary
     fmt.Println()
     mu.Lock()
     defer mu.Unlock()
